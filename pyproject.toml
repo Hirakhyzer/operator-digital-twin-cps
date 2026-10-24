@@ -1,0 +1,26 @@
+[project]
+name = "operator-digital-twin-cps"
+version = "0.1.0"
+description = "Digital-twin framework for estimating human operator state, capability, response readiness, and intervention reliability in cyber-physical systems."
+authors = [{name = "Hira Khyzer"}]
+requires-python = ">=3.10"
+readme = "README.md"
+license = {text = "MIT"}
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
