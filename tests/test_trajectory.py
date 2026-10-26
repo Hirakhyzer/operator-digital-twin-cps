@@ -23,18 +23,37 @@ def test_trajectory_detects_capability_degradation() -> None:
     assert result.first_critical_unavailable_s is not None
 
 
-def test_trajectory_can_report_recovery_after_loss_of_suitability() -> None:
+def test_trajectory_can_report_recovery_after_sustained_good_evidence() -> None:
     observations = [
         obs(0, 0.95, 0.70, 0.70, 8.0, 0.30, 9000),
         obs(60, 0.90, 0.60, 0.60, 7.0, 0.35, 9060),
         obs(120, 0.10, 0.01, 0.01, 0.8, 1.0, 60),
         obs(180, 0.05, 0.00, 0.00, 0.7, 1.0, 120),
         obs(240, 0.05, 0.00, 0.00, 0.7, 1.0, 180),
+        obs(300, 0.05, 0.00, 0.00, 0.7, 1.0, 240),
+        obs(360, 0.05, 0.00, 0.00, 0.7, 1.0, 300),
     ]
     result = analyze_operator_trajectory(observations)
     assert result.first_critical_unavailable_s == 0
     assert result.recovered_critical_capability_s is not None
     assert result.recovered_critical_capability_s > result.first_critical_unavailable_s
+    recovery = next(
+        snapshot
+        for snapshot in result.snapshots
+        if snapshot.timestamp_s == result.recovered_critical_capability_s
+    )
+    assert recovery.capability.suitable_for_critical_intervention
+
+
+def test_short_improvement_does_not_falsely_claim_recovery() -> None:
+    observations = [
+        obs(0, 0.95, 0.70, 0.70, 8.0, 0.30, 9000),
+        obs(60, 0.90, 0.60, 0.60, 7.0, 0.35, 9060),
+        obs(120, 0.10, 0.01, 0.01, 0.8, 1.0, 60),
+    ]
+    result = analyze_operator_trajectory(observations)
+    assert result.first_critical_unavailable_s == 0
+    assert result.recovered_critical_capability_s is None
 
 
 def test_trajectory_rejects_duplicate_timestamps() -> None:
