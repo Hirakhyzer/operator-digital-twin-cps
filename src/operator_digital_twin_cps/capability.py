@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 
 from .model import CapabilityAssessment, OperatorStateEstimate
 
@@ -15,6 +16,14 @@ class CapabilityPolicy:
     nominal_response_latency_s: float = 2.0
 
     def __post_init__(self) -> None:
+        for name in (
+            "critical_score_threshold",
+            "critical_confidence_threshold",
+            "max_critical_uncertainty",
+            "nominal_response_latency_s",
+        ):
+            if not isfinite(getattr(self, name)):
+                raise ValueError(f"{name} must be finite")
         if not 0.0 <= self.critical_score_threshold <= 100.0:
             raise ValueError("critical_score_threshold must be within [0, 100]")
         if not 0.0 <= self.critical_confidence_threshold <= 1.0:
