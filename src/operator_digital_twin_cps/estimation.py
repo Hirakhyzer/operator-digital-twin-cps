@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import exp
+from math import exp, isfinite
 from statistics import fmean
 from typing import Sequence
 
@@ -22,13 +22,19 @@ class EstimatorConfig:
     minimum_history: int = 3
 
     def __post_init__(self) -> None:
-        if self.nominal_response_latency_s <= 0:
-            raise ValueError("nominal_response_latency_s must be positive")
-        if self.fatigue_time_constant_s <= 0:
-            raise ValueError("fatigue_time_constant_s must be positive")
-        if self.freshness_half_life_s <= 0:
-            raise ValueError("freshness_half_life_s must be positive")
-        if isinstance(self.minimum_history, bool) or self.minimum_history < 1:
+        for name in (
+            "nominal_response_latency_s",
+            "fatigue_time_constant_s",
+            "freshness_half_life_s",
+        ):
+            value = getattr(self, name)
+            if not isfinite(value) or value <= 0:
+                raise ValueError(f"{name} must be finite and positive")
+        if (
+            not isinstance(self.minimum_history, int)
+            or isinstance(self.minimum_history, bool)
+            or self.minimum_history < 1
+        ):
             raise ValueError("minimum_history must be an integer >= 1")
 
 
@@ -46,12 +52,15 @@ def estimate_operator_state(
 
     if not observations:
         raise ValueError("at least one observation is required")
+    if not isfinite(now_s):
+        raise ValueError("now_s must be finite")
     ordered = sorted(observations, key=lambda item: item.timestamp_s)
     latest = ordered[-1]
     if now_s < latest.timestamp_s:
         raise ValueError("now_s cannot precede the latest observation")
 
-    recent = ordered[-max(config.minimum_history, min(len(ordered), 5)) :]
+    history_window = max(config.minimum_history, min(len(ordered), 5))
+    recent = ordered[-history_window:]
     workload = _clamp01(
         0.55 * fmean(item.task_load for item in recent)
         + 0.25 * fmean(item.secondary_task_error_rate for item in recent)
