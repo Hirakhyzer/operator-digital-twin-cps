@@ -4,6 +4,7 @@ import pytest
 
 from operator_digital_twin_cps import (
     CapabilityPolicy,
+    EstimatorConfig,
     OperatorObservation,
     assess_capability,
     estimate_operator_state,
@@ -78,3 +79,23 @@ def test_strict_policy_can_reject_otherwise_acceptable_operator() -> None:
         CapabilityPolicy(critical_score_threshold=95.0),
     )
     assert not assessment.suitable_for_critical_intervention
+
+
+def test_minimum_history_must_be_an_integer() -> None:
+    with pytest.raises(ValueError, match="integer"):
+        EstimatorConfig(minimum_history=2.5)  # type: ignore[arg-type]
+
+
+def test_estimator_config_rejects_nonfinite_parameters() -> None:
+    with pytest.raises(ValueError, match="finite"):
+        EstimatorConfig(freshness_half_life_s=float("nan"))
+
+
+def test_capability_policy_rejects_nonfinite_parameters() -> None:
+    with pytest.raises(ValueError, match="finite"):
+        CapabilityPolicy(critical_score_threshold=float("nan"))
+
+
+def test_estimator_rejects_nonfinite_analysis_time() -> None:
+    with pytest.raises(ValueError, match="now_s must be finite"):
+        estimate_operator_state([obs(0)], now_s=float("nan"))
